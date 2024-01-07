@@ -1,4 +1,11 @@
-    def process_user_data(self, file='./data/ml-1m/users.dat'):
+import json
+import pandas as pd
+import numpy as np
+import math
+import random
+
+
+def process_user_data(self, file='./data/ml-1m/users.dat'):
         if os.path.exists("data/users.csv"):
             print("user.csv已经存在")
         fp = pd.read_table(file, sep='::', engine='python',names=['UserID', 'Gender', 'Age', 'Occupation', 'Zip-code'])
@@ -73,18 +80,6 @@
               .format('data/user_profile.json'))
 
 
-# coding: utf-8 -*-
-
-"""
-    Author: sunchang
-    Desc:
-       编写一个基于内容推荐算法的电影推荐系统（训练模型）
-"""
-import json
-import pandas as pd
-import numpy as np
-import math
-import random
 
 class CBRecommend:
     # 加载dataProcessing.py中预处理的数据
