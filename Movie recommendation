@@ -1,0 +1,77 @@
+import pandas as pd
+import numpy as np
+from scipy.spatial.distance import cosine
+
+path1='/content/drive/MyDrive/Colab Notebooks/ratings.csv'
+path2='/content/drive/MyDrive/Colab Notebooks/movies.csv'
+ratings=pd.read_csv(path1)
+movies=pd.read_csv(path2)
+print(ratings.info())
+print(movies.info())
+
+ratings = pd.merge(ratings[['userId', 'movieId', 'rating']], movies[['movieId', 'title']],
+                   how = 'left', left_on = 'movieId', right_on = 'movieId')
+
+path3 = '/content/drive/MyDrive/Colab Notebooks/ratings_new.csv'
+data = ratings[['userId','movieId', 'rating', 'title']].sort_values('userId')
+data.to_csv(path3, index = False)
+
+rp = ratings.pivot_table(columns = ['movieId'], index = ['userId'], values = 'rating')
+rp = rp.fillna(0) #610*9724
+print(rp.shape)
+rp_mat = np.matrix(rp) #610*9724,ndarray类型
+print(rp_mat.shape)
+print(rp_mat)
+
+m, n = rp.shape
+mat_users = np.zeros((m, m))#二维数组,610*610
+print(mat_users.shape)
+#用户相似度矩阵（修正余弦相似度）
+for i in range(m):
+    for j in range(m):
+        if i != j:
+            mat_users[i][j] = (1-cosine(rp_mat[i,:]-np.mean(rp_mat[:,j]), rp_mat[j,:]-np.mean(rp_mat[:,j])))
+        else:
+            mat_users[i][j] = 0
+#得到的矩阵构建dataframe           
+pd_users = pd.DataFrame(mat_users, index = rp.index, columns = rp.index)
+
+
+# 寻找相似用户
+def topn_simusers(uid, n):
+    users = pd_users.loc[uid,:].sort_values(ascending = False)
+    topn_users = users.iloc[:n,]
+    topn_users = topn_users.rename('score')    
+    print("Similar users as user:", uid)
+    return pd.DataFrame(topn_users)
+#十个最相似用户
+top_sim_users = topn_simusers(uid = 17, n = 10)
+print(top_sim_users)   
+
+#某用户打分最高的几部电影
+def topn_movieratings(uid, n_ratings):    
+    uid_ratings = ratings.loc[ratings['userId'] == uid]
+    uid_ratings = uid_ratings.sort_values(by = 'rating', ascending = [False])
+    print ("Top", n_ratings, "movie ratings of user:", uid)
+    return uid_ratings.iloc[:n_ratings,]    
+
+top_movie_ratings1 = topn_movieratings(uid = 17, n_ratings = 10)
+print(top_movie_ratings1)
+
+uid = 17
+uid_ratings1 = ratings.loc[ratings['userId'] == uid]
+
+n_ratings = 20
+uid = 278
+top_movie_ratings2 = topn_movieratings(uid, n_ratings)
+print(top_movie_ratings2)
+
+recommend_movies = [] # 推荐电影，基于用户-用户相似度
+
+for i in range(n_ratings):
+    rt = top_movie_ratings2['movieId'].iloc[i]
+    movie_title = top_movie_ratings2['title'].iloc[i]
+    if uid_ratings1.loc[uid_ratings1.movieId == rt].rating.values.size == 0:
+        recommend_movies.append(movie_title)
+
+print('Recommended movies for the user 17 is:', recommend_movies)
